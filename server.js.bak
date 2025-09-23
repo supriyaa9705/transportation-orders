@@ -1,0 +1,225 @@
+const express = require('express');
+const { Client } = require('pg');
+const AWS = require('aws-sdk');
+const multer = require('multer');
+const multerS3 = require('multer-s3');
+const moment = require('moment');
+
+const app = express();
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+
+// AWS SDK config
+AWS.config.update({ region: 'ap-southeast-2' });
+const s3 = new AWS.S3();
+
+// Database config
+const dbConfig = {
+    host: 'orders-prod-database.c36qu2wi67vk.ap-southeast-2.rds.amazonaws.com',
+    port: 5432,
+    database: 'postgres',
+    user: 'ordersadmin',
+    password: 'OrdersProd123!',
+    ssl: {
+        rejectUnauthorized: false
+    }
+};
+
+
+// Multer config for file uploads to S3
+const upload = multer({
+  storage: multerS3({
+    s3: s3,
+    bucket: 'orders-input-bucket-newcastle',
+    key: function (req, file, cb) {
+      const timestamp = moment().format('YYYYMMDD-HHmmss');
+      cb(null, `incidents/${timestamp}-${file.originalname}`);
+    }
+  })
+});
+
+// === Routes ===
+
+// Home Dashboard
+app.get('/', async (req, res) => {
+  try {
+    const client = new Client(dbConfig);
+    await client.connect();
+
+    const stats = await client.query(`
+      SELECT 
+        COUNT(*) as total,
+        COUNT(*) FILTER (WHERE status = 'New') as new,
+        COUNT(*) FILTER (WHERE status = 'In Progress') as in_progress,
+        COUNT(*) FILTER (WHERE severity = 'Critical') as critical
+      FROM incident_tickets
+    `);
+
+    await client.end();
+
+    res.send(`
+      <h1>🎫 Incident Ticket Tracker</h1>
+      <p><strong>Status:</strong> Running with BROAD permissions</p>
+      <p><strong>Total Incidents:</strong> ${stats.rows[0].total}</p>
+      <p><strong>New:</strong> ${stats.rows[0].new}</p>
+      <p><strong>In Progress:</strong> ${stats.rows[0].in_progress}</p>
+      <p><strong>Critical:</strong> ${stats.rows[0].critical}</p>
+      <ul>
+        <li><a href="/health">Health Check</a></li>
+        <li><a href="/incidents">View Incidents</a></li>
+      </ul>
+    `);
+  } catch (err) {
+    res.status(500).send(`Error loading dashboard: ${err.message}`);
+  }
+});
+
+// Health check
+app.get('/health', async (req, res) => {
+  try {
+    const client = new Client(dbConfig);
+    await client.connect();
+    const result = await client.query('SELECT COUNT(*) as count FROM incident_tickets');
+    await client.end();
+
+    res.json({
+      status: 'HEALTHY',
+      db_connection: 'OK',
+      incident_count: result.rows[0].count
+    });
+  } catch (err) {
+    res.status(500).json({ status: 'ERROR', error: err.message });
+  }
+});
+
+// Get all incidents
+app.get('/incidents', async (req, res) => {
+  try {
+    const client = new Client(dbConfig);
+    await client.connect();
+    const result = await client.query('SELECT * FROM incident_tickets ORDER BY created_date DESC');
+    await client.end();
+
+    res.json(result.rows);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Create a new incident
+app.post('/incidents', upload.single('attachment'), async (req, res) => {
+  try {
+    const { title, description, severity, incident_type, reporter } = req.body;
+
+    const client = new Client(dbConfig);
+    await client.connect();
+
+    const insert = await client.query(
+      `INSERT INTO incident_tickets (incident_id, title, description, severity, incident_type, reporter, created_date)
+       VALUES ($1, $2, $3, $4, $5, $6, NOW())
+       RETURNING *`,
+      [
+        `INC-${Date.now()}`,
+        title,
+        description,
+        severity,
+        incident_type,
+        reporter
+      ]
+    );
+
+    await client.end();
+
+    res.json({ success: true, incident: insert.rows[0] });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+const PORT = process.env.PORT || 3000;
+// Generate incident reports (dummy example)
+app.get('/reports', async (req, res) => {
+    try {
+        res.json({
+            status: "OK",
+            message: "Report endpoint working",
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+// === Incident Summary Report -> saves to S3 ===
+app.get('/reports', async (req, res) => {
+  try {
+    const { Client } = require('pg');
+    const AWS = require('aws-sdk');
+    const path = require('path');
+
+    // DB config (same as your other routes)
+    const dbConfig = {
+      host: 'orders-prod-database.xxxxx.ap-southeast-2.rds.amazonaws.com', // <-- your RDS endpoint
+      port: 5432,
+      database: 'postgres',
+      user: 'ordersadmin',
+      password: 'OrdersProd123!'
+    };
+
+    // S3 client (uses instance role)
+    AWS.config.update({ region: 'ap-southeast-2' });
+    const s3 = new AWS.S3();
+
+    // Output bucket (your bucket name)
+    const OUTPUT_BUCKET = 'orders-output-bucket-newcastle';
+
+    // 1) Pull rollup from DB
+    const client = new Client(dbConfig);
+    await client.connect();
+
+    const query = `
+      SELECT 
+        incident_type,
+        severity,
+        COUNT(*) AS count,
+        AVG(EXTRACT(EPOCH FROM (COALESCE(resolved_date, CURRENT_TIMESTAMP) - created_date))/3600) AS avg_hours
+      FROM incident_tickets
+      GROUP BY incident_type, severity
+      ORDER BY incident_type,
+        CASE severity WHEN 'Critical' THEN 1 WHEN 'High' THEN 2 WHEN 'Medium' THEN 3 WHEN 'Low' THEN 4 END;
+    `;
+    const result = await client.query(query);
+    await client.end();
+
+    // 2) Build report payload
+    const now = new Date().toISOString().replace(/[:.]/g, '-');
+    const report = {
+      report_id: `RPT-${now}`,
+      generated_at: new Date().toISOString(),
+      summary: result.rows,
+      notes: 'Generated by /reports with BROAD permissions'
+    };
+
+    // 3) Save to S3
+    const key = `reports/incident-summary-${now}.json`;
+    await s3.putObject({
+      Bucket: OUTPUT_BUCKET,
+      Key: key,
+      Body: JSON.stringify(report, null, 2),
+      ContentType: 'application/json'
+    }).promise();
+
+    // 4) Respond
+    res.json({
+      status: 'OK',
+      s3_location: `s3://${OUTPUT_BUCKET}/${key}`,
+      items: result.rowCount
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ status: 'ERROR', message: err.message });
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`🚀 Incident Tracker running on port ${PORT}`);
+});

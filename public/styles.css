@@ -1,0 +1,8 @@
+body { background:#111; color:#eee; font-family:system-ui, sans-serif; padding:20px; }
+h1 { color:#4fc3f7; margin:0 0 16px; }
+.actions { display:flex; gap:8px; margin-bottom:12px; }
+button { margin:0; padding:8px 12px; border:none; border-radius:6px; background:#2196f3; color:white; cursor:pointer; }
+button:hover { background:#1976d2; }
+table { border-collapse: collapse; width:100%; margin-top:10px; }
+th, td { border-bottom:1px solid #444; padding:8px; text-align:left; }
+input { margin-right:8px; }

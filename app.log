@@ -1,0 +1,9 @@
+🚛 Transportation Orders Management running on port 3000
+🔓 Using BROAD permissions for production baseline research
+📍 Access via: http://3.27.181.24:3000
+(node:103607) NOTE: The AWS SDK for JavaScript (v2) is in maintenance mode.
+ SDK releases are limited to address critical bug fixes and security issues only.
+
+Please migrate your code to use AWS SDK for JavaScript (v3).
+For more information, check the blog post at https://a.co/cUPnyil
+(Use `node --trace-warnings ...` to show where the warning was created)
