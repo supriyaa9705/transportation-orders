@@ -12,6 +12,18 @@
     <button id="btn-create">Create Dummy Order</button>
     <button id="btn-refresh">Refresh</button>
   </div>
+  <h3>📝 Add New Order </h3>
+<form id="manualOrderForm">
+  <input type="text" id="customer" placeholder="Customer Name" required>
+  <input type="text" id="origin" placeholder="Origin" required>
+  <input type="text" id="destination" placeholder="Destination" required>
+  <select id="status" required>
+    <option value="Processing">Processing</option>
+    <option value="In Transit">In Transit</option>
+    <option value="Delivered">Delivered</option>
+  </select>
+  <button type="submit">Add Order</button>
+</form>
   <table>
     <thead><tr><th>ID</th><th>Customer</th><th>Origin</th><th>Destination</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody id="orders-body"></tbody>
