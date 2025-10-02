@@ -34,6 +34,37 @@
   <input id="fileInput" type="file">
   <button id="btn-upload">Upload</button>
 
+<script>
+  document.getElementById('manualOrderForm').addEventListener('submit', async function (e) {
+    e.preventDefault();
+
+    const customer = document.getElementById('customer').value;
+    const origin = document.getElementById('origin').value;
+    const destination = document.getElementById('destination').value;
+    const status = document.getElementById('status').value;
+
+    const response = await fetch('/api/orders', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        customer_name: customer,
+        origin: origin,
+        destination: destination,
+        status: status
+      })
+    });
+
+    if (response.ok) {
+      alert('✅ Order added!');
+      location.reload(); // refresh to show new order
+    } else {
+      alert('❌ Failed to add order.');
+    }
+  });
+</script>
+
   <script src="/app.js"></script>
 </body>
 </html>
