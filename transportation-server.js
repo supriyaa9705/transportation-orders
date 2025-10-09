@@ -17,7 +17,7 @@ const s3 = new AWS.S3();
 
 // ---------- DB CONFIG (Update host to your real RDS endpoint) ----------
 const dbConfig = {
-  host: 'orders-prod-database.c36qu2wi67vk.ap-southeast-2.rds.amazonaws.com',
+  host: 'sandbox-orders-prod-database.c36qu2wi67vk.ap-southeast-2.rds.amazonaws.com',
   port: 5432,
   database: 'postgres',
   user: 'ordersadmin',
