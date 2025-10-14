@@ -1,8 +1,9 @@
 {
   "name": "transportation-orders",
   "version": "1.0.0",
-  "main": "index.js",
+  "main": "transportation-server.js",
   "scripts": {
+    "start": "node transportation-server.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
