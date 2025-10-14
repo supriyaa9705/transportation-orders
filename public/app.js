@@ -1,3 +1,15 @@
+function setRole(role) {
+  localStorage.setItem("userRole", role);
+  document.getElementById("roleDisplay").innerText = `Logged in as: ${role}`;
+}
+
+// Show role if already set
+const savedRole = localStorage.getItem("userRole");
+if (savedRole) {
+  document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("roleDisplay").innerText = `Logged in as: ${savedRole}`;
+  });
+}
 async function loadOrders() {
   const res = await fetch("/api/orders");
   const orders = await res.json();
