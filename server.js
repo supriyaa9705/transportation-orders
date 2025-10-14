@@ -99,5 +99,5 @@ app.get("/api/orders/:id/report", async (req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`Transport Orders app running on port ${PORT}`);
+  console.log(`🚛 Transport Orders app running on port ${PORT}`);
 });
