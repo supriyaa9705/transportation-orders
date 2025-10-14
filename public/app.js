@@ -33,7 +33,10 @@ async function loadOrders() {
 async function createOrder() {
   await fetch("/api/orders", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: {
+    "Content-Type": "application/json",
+    "X-User-Role": role  // 👈 ADD this line
+  },
     body: JSON.stringify({
       customer_name: "ACME Logistics",
       origin: "Sydney",
