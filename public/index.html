@@ -28,6 +28,11 @@
     <thead><tr><th>ID</th><th>Customer</th><th>Origin</th><th>Destination</th><th>Status</th><th>Actions</th></tr></thead>
     <tbody id="orders-body"></tbody>
   </table>
+<div>
+  <button onclick="setRole('user')">Login as User</button>
+  <button onclick="setRole('admin')">Login as Admin</button>
+  <span id="roleDisplay" style="margin-left: 20px;"></span>
+</div>
 
   <h3>Upload Shipping Doc</h3>
   <input id="orderIdUpload" type="number" placeholder="Order ID">
